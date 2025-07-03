@@ -7,14 +7,14 @@
   <style>
     :root { --accent:#007bff; --accent-dark:#0056b3; }
     *{box-sizing:border-box;}
-    body {font-family: Arial, sans-serif; padding: 40px; background: #f2f2f2; margin:0;}
+    body {font-family: Arial, sans-serif; padding: 40px; background:#f2f2f2; margin:0;}
     .container {background:#fff; padding:30px; max-width:800px; margin:auto; box-shadow:0 0 10px rgba(0,0,0,0.1);}    
     h2 {text-align:center; margin-bottom:20px;}
     .meta {margin-bottom:20px; display:flex; gap:1rem; align-items:center; flex-wrap:wrap;}
     .meta label {font-weight:bold;}
     .meta input {padding:5px; width:160px;}
     .table-wrapper{overflow-x:auto;}
-    table {width:100%; border-collapse:collapse; margin-bottom:20px; min-width:520px;}
+    table {width:100%; border-collapse:collapse; margin-bottom:20px; min-width:600px;}
     th,td {border:1px solid #000; padding:8px; text-align:center;}
     input[type="text"],input[type="number"]{width:100%; padding:5px;}
     .btn {padding:10px 20px; background:var(--accent); color:#fff; border:none; cursor:pointer; margin-top:10px;}
@@ -27,11 +27,8 @@
       table th,table td{padding:6px; font-size:0.75rem;}
       .meta{flex-direction:column; align-items:flex-start;}
       .meta input{width:100%;}
-      /* hide Qty & Action columns on small screens for clarity */
-      th.qty-header, td.action-cell, th.action-header{display:none;}
-      #itemTable tbody td:nth-child(2), /* Qty */
-      #itemTable thead th:nth-child(2),
-      #itemTable tbody td:last-child,  /* Action */
+      th.action-header, td.action-cell,
+      #itemTable tbody td:last-child,
       #itemTable thead th:last-child{display:none;}
     }
   </style>
@@ -49,9 +46,9 @@
         <thead>
           <tr>
             <th>Type</th>
-            <th class="qty-header">Qty</th>
-            <th>Rate (%)</th>
-            <th>Calculation</th>
+            <th>Qty</th>
+            <th>Percentage (%)</th>
+            <th>Rate (₹)</th>
             <th>Amount (₹)</th>
             <th class="action-header">Action</th>
           </tr>
@@ -83,7 +80,7 @@ function addRow(){
   tr.innerHTML=`<td><input type="text" placeholder="Type"/></td>
                 <td><input type="number" value="0"/></td>
                 <td><input type="number" value="0"/></td>
-                <td><input type="text" placeholder="Calc"/></td>
+                <td><input type="text" value="0"/></td>
                 <td><input type="number" value="0" oninput="calculateTotal()"/></td>
                 <td class="action-cell"><button onclick="this.closest('tr').remove(); calculateTotal();">Remove</button></td>`;
   document.querySelector('#itemTable tbody').appendChild(tr);
@@ -109,41 +106,44 @@ function calculateTotal(){
   document.getElementById('balance').innerText=formatINR(balance);
 }
 
-function formatDate(val){if(!val)return '—';return new Date(val).toLocaleDateString('en-GB');}
+function formatDate(v){return v?new Date(v).toLocaleDateString('en-GB'):'—';}
 
 function getPrintableClone(){
   const clone=document.getElementById('billArea').cloneNode(true);
-  const table=clone.querySelector('#itemTable');
-  const hdr=table.querySelector('thead tr');
-  hdr.removeChild(hdr.children[1]); // remove Qty header
-  hdr.removeChild(hdr.lastElementChild); // remove Action header
+  const tbl=clone.querySelector('#itemTable');
+  const hdr=tbl.querySelector('thead tr');
+  hdr.removeChild(hdr.children[1]); // remove Qty hdr
+  hdr.removeChild(hdr.lastElementChild); // remove Action hdr
+
   clone.querySelectorAll('#itemTable tbody tr').forEach(row=>{
     const type=row.children[0].querySelector('input').value||'—';
     const qty=row.children[1].querySelector('input').value||'';
-    const rate=row.children[2].querySelector('input').value||'';
-    const calc=row.children[3].querySelector('input').value||'—';
+    const perc=row.children[2].querySelector('input').value||'';
+    const rate=row.children[3].querySelector('input').value||'';
     const amt=row.children[4].querySelector('input').value||'';
+
     row.children[0].innerHTML=type;
-    row.children[2].innerHTML=`${qty}-${rate}%`;
-    row.children[3].innerHTML=calc;
+    row.children[2].innerHTML=(qty||perc)?`${qty}-${perc}%`:'—';
+    row.children[3].innerHTML=rate?formatINR(rate):'—';
     row.children[4].innerHTML=amt?formatINR(amt):'—';
-    row.removeChild(row.children[1]);
-    row.removeChild(row.lastElementChild);
+
+    row.removeChild(row.children[1]); // remove Qty cell
+    row.removeChild(row.lastElementChild); // remove Action cell
   });
+
   clone.querySelectorAll('input').forEach(inp=>{
     const span=document.createElement('span');
     if(inp.type==='date') span.textContent=formatDate(inp.value);
     else{const num=parseFloat(inp.value);span.textContent=isNaN(num)?inp.value:formatINR(num);}    
     inp.parentNode.replaceChild(span,inp);
   });
-  clone.querySelectorAll('button').forEach(btn=>btn.remove());
+  clone.querySelectorAll('button').forEach(b=>b.remove());
   clone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
   return clone;
 }
 
 document.getElementById('downloadBtn').addEventListener('click',()=>{
-  const clone=getPrintableClone();
-  html2pdf().set({margin:0.3, filename:`IQBAL_KUSHALNAGAR_Bill_${new Date().toISOString().slice(0,10)}.pdf`, html2canvas:{scale:2}, jsPDF:{unit:'in',format:'a4',orientation:'portrait'}}).from(clone).save();
+  html2pdf().set({margin:0.3, filename:`IQBAL_KUSHALNAGAR_Bill_${new Date().toISOString().slice(0,10)}.pdf`, html2canvas:{scale:2}, jsPDF:{unit:'in',format:'a4',orientation:'portrait'}}).from(getPrintableClone()).save();
 });
 
 addRow();
