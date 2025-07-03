@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IQBAL KUSHALNAGAR BILL</title>
+  <style>
+    body {font-family: Arial, sans-serif; padding: 40px; background: #f2f2f2;}
+    .container {background:#fff; padding:30px; max-width:800px; margin:auto; box-shadow:0 0 10px rgba(0,0,0,0.1);}    
+    h2 {text-align:center; margin-bottom:20px;}
+    .meta {margin-bottom:20px;}
+    .meta label {font-weight:bold; margin-right:8px;}
+    .meta input {padding:5px;}
+    table {width:100%; border-collapse:collapse; margin-bottom:20px;}
+    th,td {border:1px solid #000; padding:8px; text-align:center;}
+    input[type="text"],input[type="number"]{width:100%; padding:5px; box-sizing:border-box;}
+    .btn {padding:10px 20px; background:#007bff; color:#fff; border:none; cursor:pointer; margin-top:10px;}
+    .btn:hover {background:#0056b3;}
+    .highlight {background:#f8f9fa; font-weight:bold;}
+  </style>
+</head>
+<body>
+  <div class="container" id="billArea">
+    <h2>IQBAL KUSHALNAGAR</h2>
+    <div class="meta">
+      <label for="billDate">Date:</label>
+      <input type="date" id="billDate" />
+    </div>
+
+    <table id="itemTable">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th class="qty-header">Qty</th>
+          <th>Rate (%)</th>
+          <th>Calculation</th>
+          <th>Amount (₹)</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <button class="btn" onclick="addRow()">Add Row</button>
+
+    <table>
+      <!-- New order: total before unload, unload, total after unload, opening, grand total -->
+      <tr class="highlight"><td colspan="4">TOTAL</td><td><strong id="totalBefore">₹0</strong></td></tr>
+      <tr><td colspan="4">UNLOAD &amp; MEASUREMENT</td><td><input type="number" id="unload" value="0" oninput="calculateTotal()" /></td></tr>
+      <tr class="highlight"><td colspan="4">TOTAL</td><td><strong id="totalAfter">₹0</strong></td></tr>
+      <tr><td colspan="4">OPENING BALANCE</td><td><input type="number" id="opening" value="0" oninput="calculateTotal()" /></td></tr>
+      <tr class="highlight"><td colspan="4">GRAND TOTAL</td><td><strong id="grandTotal">₹0</strong></td></tr>
+      <tr><td colspan="4">A/C TRANSFER AMOUNT</td><td><input type="number" id="transfer" value="0" oninput="calculateTotal()" /></td></tr>
+      <tr class="highlight"><td colspan="4">BALANCE AMOUNT</td><td><strong id="balance">₹0</strong></td></tr>
+    </table>
+
+    <button class="btn" id="downloadBtn">Download PDF</button>
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+<script>
+function addRow(){
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><input type="text" placeholder="Type"/></td>
+                <td><input type="number" value="0"/></td>
+                <td><input type="number" value="0"/></td>
+                <td><input type="text" placeholder="Calc"/></td>
+                <td><input type="number" value="0" oninput="calculateTotal()"/></td>
+                <td><button onclick="this.closest('tr').remove(); calculateTotal();">Remove</button></td>`;
+  document.querySelector('#itemTable tbody').appendChild(tr);
+}
+
+function formatINR(n){return '₹'+new Intl.NumberFormat('en-IN').format(n);}  
+
+function calculateTotal(){
+  let total=0;
+  document.querySelectorAll('#itemTable tbody tr').forEach(row=>{
+    const val=parseFloat(row.children[4].querySelector('input').value)||0;
+    total+=val;
+  });
+  document.getElementById('totalBefore').innerText=formatINR(total);
+  const unload=parseFloat(document.getElementById('unload').value)||0;
+  const totalAfter=total-unload;
+  document.getElementById('totalAfter').innerText=formatINR(totalAfter);
+  const opening=parseFloat(document.getElementById('opening').value)||0;
+  const grand=totalAfter+opening;
+  document.getElementById('grandTotal').innerText=formatINR(grand);
+  const transfer=parseFloat(document.getElementById('transfer').value)||0;
+  const balance=grand-transfer;
+  document.getElementById('balance').innerText=formatINR(balance);
+}
+
+function formatDate(val){
+  if(!val) return '—';
+  const d=new Date(val);
+  return d.toLocaleDateString('en-GB'); // dd/mm/yyyy
+}
+
+function getPrintableClone(){
+  const clone=document.getElementById('billArea').cloneNode(true);
+  const table=clone.querySelector('#itemTable');
+  const hdr = table.querySelector('thead tr');
+  // Remove Qty and Action headers
+  hdr.removeChild(hdr.children[1]); // Qty header (2nd)
+  hdr.removeChild(hdr.lastElementChild); // Action header (last)
+  clone.querySelectorAll('#itemTable tbody tr').forEach(row=>{
+    const type=row.children[0].querySelector('input').value||'—';
+    const qty=row.children[1].querySelector('input').value||'';
+    const rate=row.children[2].querySelector('input').value||'';
+    const calc=row.children[3].querySelector('input').value||'—';
+    const amt=row.children[4].querySelector('input').value||'';
+    row.children[0].innerHTML=type;
+    row.children[2].innerHTML=`${qty}-${rate}%`;
+    row.children[3].innerHTML=calc;
+    row.children[4].innerHTML=amt?formatINR(amt):'—';
+    row.removeChild(row.children[1]);
+    row.removeChild(row.lastElementChild);
+  });
+  clone.querySelectorAll('input').forEach(inp=>{
+    const span=document.createElement('span');
+    if(inp.type==='date') span.textContent=formatDate(inp.value);
+    else{const num=parseFloat(inp.value);span.textContent=isNaN(num)?inp.value:formatINR(num);}    
+    inp.parentNode.replaceChild(span,inp);
+  });
+  clone.querySelectorAll('button').forEach(btn=>btn.remove());
+  clone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
+  return clone;
+}
+
+document.getElementById('downloadBtn').addEventListener('click',()=>{
+  const clone=getPrintableClone();
+  html2pdf().set({margin:0.3, filename:`IQBAL_KUSHALNAGAR_Bill_${new Date().toISOString().slice(0,10)}.pdf`, html2canvas:{scale:2}, jsPDF:{unit:'in',format:'a4',orientation:'portrait'}}).from(clone).save();
+});
+
+addRow();
+</script>
+</body>
+</html>
