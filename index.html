@@ -5,18 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IQBAL KUSHALNAGAR BILL</title>
   <style>
-    body {font-family: Arial, sans-serif; padding: 40px; background: #f2f2f2;}
+    :root { --accent:#007bff; --accent-dark:#0056b3; }
+    *{box-sizing:border-box;}
+    body {font-family: Arial, sans-serif; padding: 40px; background: #f2f2f2; margin:0;}
     .container {background:#fff; padding:30px; max-width:800px; margin:auto; box-shadow:0 0 10px rgba(0,0,0,0.1);}    
     h2 {text-align:center; margin-bottom:20px;}
-    .meta {margin-bottom:20px;}
-    .meta label {font-weight:bold; margin-right:8px;}
-    .meta input {padding:5px;}
-    table {width:100%; border-collapse:collapse; margin-bottom:20px;}
+    .meta {margin-bottom:20px; display:flex; gap:1rem; align-items:center; flex-wrap:wrap;}
+    .meta label {font-weight:bold;}
+    .meta input {padding:5px; width:160px;}
+    .table-wrapper{overflow-x:auto;}
+    table {width:100%; border-collapse:collapse; margin-bottom:20px; min-width:520px;}
     th,td {border:1px solid #000; padding:8px; text-align:center;}
-    input[type="text"],input[type="number"]{width:100%; padding:5px; box-sizing:border-box;}
-    .btn {padding:10px 20px; background:#007bff; color:#fff; border:none; cursor:pointer; margin-top:10px;}
-    .btn:hover {background:#0056b3;}
+    input[type="text"],input[type="number"]{width:100%; padding:5px;}
+    .btn {padding:10px 20px; background:var(--accent); color:#fff; border:none; cursor:pointer; margin-top:10px;}
+    .btn:hover {background:var(--accent-dark);}    
     .highlight {background:#f8f9fa; font-weight:bold;}
+
+    @media (max-width:600px){
+      body{padding:15px;}
+      .container{padding:20px;}
+      table th,table td{padding:6px; font-size:0.75rem;}
+      .meta{flex-direction:column; align-items:flex-start;}
+      .meta input{width:100%;}
+      /* hide Qty & Action columns on small screens for clarity */
+      th.qty-header, td.action-cell, th.action-header{display:none;}
+      #itemTable tbody td:nth-child(2), /* Qty */
+      #itemTable thead th:nth-child(2),
+      #itemTable tbody td:last-child,  /* Action */
+      #itemTable thead th:last-child{display:none;}
+    }
   </style>
 </head>
 <body>
@@ -27,31 +44,34 @@
       <input type="date" id="billDate" />
     </div>
 
-    <table id="itemTable">
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th class="qty-header">Qty</th>
-          <th>Rate (%)</th>
-          <th>Calculation</th>
-          <th>Amount (₹)</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div class="table-wrapper">
+      <table id="itemTable">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th class="qty-header">Qty</th>
+            <th>Rate (%)</th>
+            <th>Calculation</th>
+            <th>Amount (₹)</th>
+            <th class="action-header">Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
     <button class="btn" onclick="addRow()">Add Row</button>
 
-    <table>
-      <!-- New order: total before unload, unload, total after unload, opening, grand total -->
-      <tr class="highlight"><td colspan="4">TOTAL</td><td><strong id="totalBefore">₹0</strong></td></tr>
-      <tr><td colspan="4">UNLOAD &amp; MEASUREMENT</td><td><input type="number" id="unload" value="0" oninput="calculateTotal()" /></td></tr>
-      <tr class="highlight"><td colspan="4">TOTAL</td><td><strong id="totalAfter">₹0</strong></td></tr>
-      <tr><td colspan="4">OPENING BALANCE</td><td><input type="number" id="opening" value="0" oninput="calculateTotal()" /></td></tr>
-      <tr class="highlight"><td colspan="4">GRAND TOTAL</td><td><strong id="grandTotal">₹0</strong></td></tr>
-      <tr><td colspan="4">A/C TRANSFER AMOUNT</td><td><input type="number" id="transfer" value="0" oninput="calculateTotal()" /></td></tr>
-      <tr class="highlight"><td colspan="4">BALANCE AMOUNT</td><td><strong id="balance">₹0</strong></td></tr>
-    </table>
+    <div class="table-wrapper">
+      <table>
+        <tr class="highlight"><td colspan="4">TOTAL</td><td><strong id="totalBefore">₹0</strong></td></tr>
+        <tr><td colspan="4">UNLOAD &amp; MEASUREMENT</td><td><input type="number" id="unload" value="0" oninput="calculateTotal()" /></td></tr>
+        <tr class="highlight"><td colspan="4">TOTAL</td><td><strong id="totalAfter">₹0</strong></td></tr>
+        <tr><td colspan="4">OPENING BALANCE</td><td><input type="number" id="opening" value="0" oninput="calculateTotal()" /></td></tr>
+        <tr class="highlight"><td colspan="4">GRAND TOTAL</td><td><strong id="grandTotal">₹0</strong></td></tr>
+        <tr><td colspan="4">A/C TRANSFER AMOUNT</td><td><input type="number" id="transfer" value="0" oninput="calculateTotal()" /></td></tr>
+        <tr class="highlight"><td colspan="4">BALANCE AMOUNT</td><td><strong id="balance">₹0</strong></td></tr>
+      </table>
+    </div>
 
     <button class="btn" id="downloadBtn">Download PDF</button>
   </div>
@@ -65,7 +85,7 @@ function addRow(){
                 <td><input type="number" value="0"/></td>
                 <td><input type="text" placeholder="Calc"/></td>
                 <td><input type="number" value="0" oninput="calculateTotal()"/></td>
-                <td><button onclick="this.closest('tr').remove(); calculateTotal();">Remove</button></td>`;
+                <td class="action-cell"><button onclick="this.closest('tr').remove(); calculateTotal();">Remove</button></td>`;
   document.querySelector('#itemTable tbody').appendChild(tr);
 }
 
@@ -89,19 +109,14 @@ function calculateTotal(){
   document.getElementById('balance').innerText=formatINR(balance);
 }
 
-function formatDate(val){
-  if(!val) return '—';
-  const d=new Date(val);
-  return d.toLocaleDateString('en-GB'); // dd/mm/yyyy
-}
+function formatDate(val){if(!val)return '—';return new Date(val).toLocaleDateString('en-GB');}
 
 function getPrintableClone(){
   const clone=document.getElementById('billArea').cloneNode(true);
   const table=clone.querySelector('#itemTable');
-  const hdr = table.querySelector('thead tr');
-  // Remove Qty and Action headers
-  hdr.removeChild(hdr.children[1]); // Qty header (2nd)
-  hdr.removeChild(hdr.lastElementChild); // Action header (last)
+  const hdr=table.querySelector('thead tr');
+  hdr.removeChild(hdr.children[1]); // remove Qty header
+  hdr.removeChild(hdr.lastElementChild); // remove Action header
   clone.querySelectorAll('#itemTable tbody tr').forEach(row=>{
     const type=row.children[0].querySelector('input').value||'—';
     const qty=row.children[1].querySelector('input').value||'';
