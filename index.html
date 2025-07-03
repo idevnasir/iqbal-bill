@@ -27,6 +27,7 @@
       table th,table td{padding:6px; font-size:0.75rem;}
       .meta{flex-direction:column; align-items:flex-start;}
       .meta input{width:100%;}
+      /* hide Action column only on small screens */
       th.action-header, td.action-cell,
       #itemTable tbody td:last-child,
       #itemTable thead th:last-child{display:none;}
@@ -80,7 +81,7 @@ function addRow(){
   tr.innerHTML=`<td><input type="text" placeholder="Type"/></td>
                 <td><input type="number" value="0"/></td>
                 <td><input type="number" value="0"/></td>
-                <td><input type="text" value="0"/></td>
+                <td><input type="text" value="0X0"/></td>
                 <td><input type="number" value="0" oninput="calculateTotal()"/></td>
                 <td class="action-cell"><button onclick="this.closest('tr').remove(); calculateTotal();">Remove</button></td>`;
   document.querySelector('#itemTable tbody').appendChild(tr);
@@ -112,8 +113,7 @@ function getPrintableClone(){
   const clone=document.getElementById('billArea').cloneNode(true);
   const tbl=clone.querySelector('#itemTable');
   const hdr=tbl.querySelector('thead tr');
-  hdr.removeChild(hdr.children[1]); // remove Qty hdr
-  hdr.removeChild(hdr.lastElementChild); // remove Action hdr
+  hdr.removeChild(hdr.lastElementChild); // remove Action header only
 
   clone.querySelectorAll('#itemTable tbody tr').forEach(row=>{
     const type=row.children[0].querySelector('input').value||'—';
@@ -123,11 +123,11 @@ function getPrintableClone(){
     const amt=row.children[4].querySelector('input').value||'';
 
     row.children[0].innerHTML=type;
-    row.children[2].innerHTML=(qty||perc)?`${qty}-${perc}%`:'—';
+    row.children[1].innerHTML=qty?new Intl.NumberFormat('en-IN').format(qty):'—';
+    row.children[2].innerHTML=perc?perc+'%':'—';
     row.children[3].innerHTML=rate?formatINR(rate):'—';
     row.children[4].innerHTML=amt?formatINR(amt):'—';
 
-    row.removeChild(row.children[1]); // remove Qty cell
     row.removeChild(row.lastElementChild); // remove Action cell
   });
 
